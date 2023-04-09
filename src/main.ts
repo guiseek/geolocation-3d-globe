@@ -1,7 +1,19 @@
-import {getPositionFromCoords, createPoint, createEarth} from './utilities'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three'
+import {
+  GeoHandler,
+  csvToJson,
+  createPoint,
+  createEarth,
+  getPositionFromCoords,
+} from './utilities'
 import './style.scss'
+
+const getCsv = async <R>(url: string, cb: (value: string) => R): Promise<R> => {
+  return fetch(url)
+    .then((res) => res.text())
+    .then((data) => cb(data))
+}
 
 const canvas = document.createElement('canvas')
 
@@ -34,6 +46,7 @@ onresize = () => {
 }
 
 const controls = new OrbitControls(camera, canvas)
+controls.maxZoom = 0.1
 
 /**
  * Configuração de iluminação
@@ -58,25 +71,36 @@ scene.add(mesh)
 
 let currentMesh = mesh
 
+const geoHandler = new GeoHandler()
+
+geoHandler.loadLocations('neighborhoods.json')
+
 /**
  * Acompanha geolocalização do usuário
  * e atualiza posição no globo virtual
  */
 
-navigator.geolocation.watchPosition(({coords}) => {
+geoHandler.position$.subscribe((position) => {
   const mesh = createPoint()
 
   currentMesh.add(mesh)
 
-  let latlonpoint = getPositionFromCoords(
-    coords.latitude,
-    coords.longitude,
+  let [x, y, z] = getPositionFromCoords(
+    position.latitude,
+    position.longitude,
     0.5
   )
-  mesh.position.add(
-    new THREE.Vector3(latlonpoint[0], latlonpoint[1], latlonpoint[2])
-  )
+  mesh.position.add(new THREE.Vector3(x, y, z))
+
+  const h1 = document.createElement('h1')
+  const location = geoHandler.findNearLocation(position)
+  if (location) {
+    h1.textContent = `${location.bairro}, ${location.municipio} - ${location.uf}`
+    document.body.appendChild(h1)
+  }
 })
+
+geoHandler.listenPosition()
 
 /**
  * Intercepta eventos do mouse e atualiza
