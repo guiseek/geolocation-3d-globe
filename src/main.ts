@@ -2,18 +2,11 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three'
 import {
   GeoHandler,
-  csvToJson,
   createPoint,
   createEarth,
   getPositionFromCoords,
 } from './utilities'
 import './style.scss'
-
-const getCsv = async <R>(url: string, cb: (value: string) => R): Promise<R> => {
-  return fetch(url)
-    .then((res) => res.text())
-    .then((data) => cb(data))
-}
 
 const canvas = document.createElement('canvas')
 
