@@ -1,9 +1,7 @@
+import {getPositionFromCoords, createPoint, createEarth} from './utilities'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three'
 import './style.scss'
-import {createPoint} from './utilities/create-point'
-import {createEarth} from './utilities/create-earth'
-import {getPositionFromCoords} from './utilities/get-position-from-coords'
 
 const canvas = document.createElement('canvas')
 
@@ -14,8 +12,6 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(innerWidth, innerHeight)
 renderer.setPixelRatio(devicePixelRatio)
 document.body.appendChild(renderer.domElement)
-
-const updateFcts: ((delta: number, now: number) => void)[] = []
 
 /**
  * Cria cena visual
@@ -66,24 +62,21 @@ let currentMesh = mesh
  * Acompanha geolocalização do usuário
  * e atualiza posição no globo virtual
  */
-const init = () => {
-  navigator.geolocation.watchPosition(({coords}) => {
-    const mesh = createPoint()
 
-    currentMesh.add(mesh)
+navigator.geolocation.watchPosition(({coords}) => {
+  const mesh = createPoint()
 
-    let latlonpoint = getPositionFromCoords(
-      coords.latitude,
-      coords.longitude,
-      0.5
-    )
-    mesh.position.add(
-      new THREE.Vector3(latlonpoint[0], latlonpoint[1], latlonpoint[2])
-    )
-  })
-}
+  currentMesh.add(mesh)
 
-document.onclick = init
+  let latlonpoint = getPositionFromCoords(
+    coords.latitude,
+    coords.longitude,
+    0.5
+  )
+  mesh.position.add(
+    new THREE.Vector3(latlonpoint[0], latlonpoint[1], latlonpoint[2])
+  )
+})
 
 /**
  * Intercepta eventos do mouse e atualiza
@@ -106,6 +99,8 @@ document.ontouchstart = () => (isDragging = true)
 document.onmousedown = () => (isDragging = true)
 document.ontouchend = () => (isDragging = false)
 document.onmouseup = () => (isDragging = false)
+
+const updateFcts: ((delta: number, now: number) => void)[] = []
 
 /**
  * Adiciona função de atualização
@@ -131,26 +126,24 @@ updateFcts.push((delta: number) => {
 })
 
 // Adiciona função de renderização
-updateFcts.push(() => {
-  renderer.render(scene, camera)
-})
+updateFcts.push(() => renderer.render(scene, camera))
 
 /**
  * Animation Frame (Game Loop)
  */
-let lastTimeMsec: number
-requestAnimationFrame(function animate(nowMsec) {
+let lastUpdate: number
+requestAnimationFrame(function animate(currentTime) {
   requestAnimationFrame(animate)
 
   // Medição do tempo: última hora em ms
-  lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60
-  const deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
-  lastTimeMsec = nowMsec
+  lastUpdate = lastUpdate || currentTime - 1000 / 60
+  const deltaTime = Math.min(200, currentTime - lastUpdate)
+  lastUpdate = currentTime
 
   controls.update()
 
   // Chama funções de controle e renderização a cada frame
   updateFcts.forEach((updateFn) => {
-    updateFn(deltaMsec / 1000, nowMsec / 1000)
+    updateFn(deltaTime / 1000, currentTime / 1000)
   })
 })
