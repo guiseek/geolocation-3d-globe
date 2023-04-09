@@ -1,10 +1,18 @@
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three'
 import './style.scss'
+import {createPoint} from './utilities/create-point'
+import {createEarth} from './utilities/create-earth'
+import {getPositionFromCoords} from './utilities/get-position-from-coords'
+
+const canvas = document.createElement('canvas')
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
+  canvas,
 })
 renderer.setSize(innerWidth, innerHeight)
+renderer.setPixelRatio(devicePixelRatio)
 document.body.appendChild(renderer.domElement)
 
 const updateFcts: ((delta: number, now: number) => void)[] = []
@@ -17,13 +25,19 @@ const scene = new THREE.Scene()
 /**
  * Configuração da câmera
  */
-const camera = new THREE.PerspectiveCamera(
-  45,
-  innerWidth / innerHeight,
-  0.01,
-  100
-)
-camera.position.z = 1.5
+const aspect = innerWidth / innerHeight
+const camera = new THREE.PerspectiveCamera(50, aspect, 0.01, 100)
+camera.aspect = aspect
+
+camera.position.set(0.5, 2, 1)
+
+onresize = () => {
+  camera.aspect = innerWidth / innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(innerWidth, innerHeight)
+}
+
+const controls = new OrbitControls(camera, canvas)
 
 /**
  * Configuração de iluminação
@@ -43,41 +57,6 @@ light = new THREE.DirectionalLight(0xcccccc, 1)
 scene.add(light)
 light.castShadow = true
 
-/**
- * Cria globo terrestre virtual
- */
-const createEarth = () => {
-  const geometry = new THREE.SphereGeometry(0.5, 32, 32)
-  const material = new THREE.MeshPhongMaterial({
-    map: new THREE.TextureLoader().load('globe.jpg'),
-  })
-  const mesh = new THREE.Mesh(geometry, material)
-
-  return mesh
-}
-
-/**
- * Cria marcador de posição
- */
-const createPoint = () => {
-  const geometry = new THREE.SphereGeometry(0.005, 20, 20)
-  const material = new THREE.MeshBasicMaterial({
-    color: new THREE.Color('lime'),
-  })
-  return new THREE.Mesh(geometry, material)
-}
-
-function getPositionFromCoords(lat: number, lon: number, radius: number) {
-  const phi = (90 - lat) * (Math.PI / 180)
-  const theta = (lon + 180) * (Math.PI / 180)
-
-  const x = -(radius * Math.sin(phi) * Math.cos(theta))
-  const z = radius * Math.sin(phi) * Math.sin(theta)
-  const y = radius * Math.cos(phi)
-
-  return [x, y, z]
-}
-
 let mesh: THREE.Mesh = createEarth()
 scene.add(mesh)
 
@@ -89,7 +68,6 @@ let currentMesh = mesh
  */
 const init = () => {
   navigator.geolocation.watchPosition(({coords}) => {
-    console.log(coords)
     const mesh = createPoint()
 
     currentMesh.add(mesh)
@@ -112,6 +90,7 @@ document.onclick = init
  * posição x e y para controle de rotação
  */
 const mouse = {x: 0, y: 0}
+
 document.addEventListener(
   'mousemove',
   ({clientX, clientY}) => {
@@ -121,12 +100,21 @@ document.addEventListener(
   false
 )
 
+let isDragging = false
+
+document.ontouchstart = () => (isDragging = true)
+document.onmousedown = () => (isDragging = true)
+document.ontouchend = () => (isDragging = false)
+document.onmouseup = () => (isDragging = false)
+
 /**
  * Adiciona função de atualização
  * Controla eixo x e y da rotação
  * com relação a posição do mouse
  */
 updateFcts.push((delta: number) => {
+  if (isDragging) return
+
   currentMesh.rotation.y -= mouse.x * 1 * (delta * 1)
 
   if (currentMesh.rotation.x <= 1 && currentMesh.rotation.x >= -1) {
@@ -158,6 +146,8 @@ requestAnimationFrame(function animate(nowMsec) {
   lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60
   const deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
   lastTimeMsec = nowMsec
+
+  controls.update()
 
   // Chama funções de controle e renderização a cada frame
   updateFcts.forEach((updateFn) => {
