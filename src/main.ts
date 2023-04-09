@@ -8,7 +8,8 @@ import {
 } from './utilities'
 import './style.scss'
 
-const canvas = document.createElement('canvas')
+const canvas = document.querySelector('canvas')!
+const h1 = document.querySelector('h1')!
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -66,14 +67,12 @@ let currentMesh = mesh
 
 const geoHandler = new GeoHandler()
 
-geoHandler.loadLocations('neighborhoods.json')
-
 /**
  * Acompanha geolocalização do usuário
  * e atualiza posição no globo virtual
  */
 
-geoHandler.position$.subscribe((position) => {
+geoHandler.position$.subscribe(async (position) => {
   const mesh = createPoint()
 
   currentMesh.add(mesh)
@@ -85,7 +84,7 @@ geoHandler.position$.subscribe((position) => {
   )
   mesh.position.add(new THREE.Vector3(x, y, z))
 
-  const h1 = document.createElement('h1')
+  await geoHandler.loadLocations('neighborhoods.json')
   const location = geoHandler.findNearLocation(position)
   if (location) {
     h1.textContent = `${location.bairro}, ${location.municipio} - ${location.uf}`

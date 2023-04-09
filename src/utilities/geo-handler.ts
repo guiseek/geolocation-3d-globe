@@ -30,14 +30,15 @@ export class GeoHandler {
     return diffCoord * (Math.PI / 180)
   }
 
-  loadLocations(url: string) {
+  async loadLocations(url: string) {
     if (!GeoHandler.NEIGHBORHOODS.length) {
-      fetch(url)
+      return fetch(url)
         .then((res) => res.json())
         .then((data: Neighborhood[]) => {
           GeoHandler.NEIGHBORHOODS = data
         })
     }
+    return
   }
 
   findNearLocation(position: Position) {
