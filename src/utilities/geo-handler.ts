@@ -43,7 +43,7 @@ export class GeoHandler {
   findNearLocation(position: Position) {
     const distances = GeoHandler.NEIGHBORHOODS.map(({latitude, longitude}) => {
       return this.getDistance({latitude, longitude}, position)
-    }).filter((distance) => !isNaN(distance))
+    }).filter((distance) => !isNaN(distance)) as number[]
 
     const lowerDistance = Math.min(...distances)
     const index = distances.findLastIndex(

@@ -10,3 +10,10 @@ interface Neighborhood {
   latitude: number
   longitude: number
 }
+
+interface Array<T> {
+  findLastIndex(
+    predicate: (value: number, index: number, array: number[]) => unknown,
+    thisArg?: any
+  ): number
+}
