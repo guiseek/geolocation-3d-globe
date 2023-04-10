@@ -1,9 +1,10 @@
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three'
 import {
-  GeoHandler,
   createPoint,
   createEarth,
+  findNearCity,
+  getPosition,
   getPositionFromCoords,
 } from './utilities'
 import './style.scss'
@@ -65,34 +66,24 @@ scene.add(mesh)
 
 let currentMesh = mesh
 
-const geoHandler = new GeoHandler()
-
 /**
  * Acompanha geolocalização do usuário
  * e atualiza posição no globo virtual
  */
+const fetchCities = fetch('cities.json').then((res) => res.json())
 
-geoHandler.position$.subscribe(async (position) => {
+getPosition().subscribe(({coords}) => {
   const mesh = createPoint()
 
   currentMesh.add(mesh)
 
-  let [x, y, z] = getPositionFromCoords(
-    position.latitude,
-    position.longitude,
-    0.5
-  )
+  let [x, y, z] = getPositionFromCoords(coords.latitude, coords.longitude, 0.5)
   mesh.position.add(new THREE.Vector3(x, y, z))
-
-  await geoHandler.loadLocations('neighborhoods.json')
-  const location = geoHandler.findNearLocation(position)
-  if (location) {
-    h1.textContent = `${location.bairro}, ${location.municipio} - ${location.uf}`
-    document.body.appendChild(h1)
-  }
+  fetchCities.then((cities: City[]) => {
+    const {city, country} = findNearCity(cities, coords)
+    h1.textContent = `${city}, ${country}`
+  })
 })
-
-geoHandler.listenPosition()
 
 /**
  * Intercepta eventos do mouse e atualiza
